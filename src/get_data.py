@@ -1,8 +1,9 @@
 """Tool to get the data from the Twitter API."""
 import json
+import re
+from typing import List
 
 import requests
-import re
 
 from .config import BASE_PATH, TWITTER_TOKEN
 
@@ -10,13 +11,13 @@ from .config import BASE_PATH, TWITTER_TOKEN
 ENDPOINT = 'https://api.twitter.com/2/tweets/search/recent'
 
 
-def load_users():
+def load_users() -> List[str]:
     """Load the users to get tweets from."""
     with open(str(BASE_PATH / 'accounts.txt')) as f:
         return list(f.read().strip().split('\n'))
 
 
-def form_queries(users):
+def form_queries(users: List[str]) -> List[str]:
     """Put the lists of users into seperate Twitter queries."""
     next_group = []
     queries = []
@@ -30,7 +31,7 @@ def form_queries(users):
     return queries
 
 
-def make_queries(queries, target_tweets):
+def make_queries(queries: List[str], target_tweets: int) -> List[str]:
     """Get tweets from some queries."""
     headers = {'Authorization': f'Bearer {TWITTER_TOKEN}'}
     tweets = []
@@ -44,6 +45,7 @@ def make_queries(queries, target_tweets):
             params = {'query': query, 'max_results': 100}
             if next_token:
                 params['next_token'] = next_token
+            print('aaa')
             response = requests.get(
                 ENDPOINT, headers=headers, params=params
             ).json()
@@ -55,14 +57,23 @@ def make_queries(queries, target_tweets):
     return tweets
 
 
-def download_tweets(target_tweets=100):
+def filter_tweets(tweets: List[str]) -> List[str]:
+    """Filter tweets to remove user mentions and links."""
+    filtered_tweets = []
+    for tweet in tweets:
+        filtered_tweet = re.sub(r'@\w{4,15}', '', tweet)
+        filtered_tweet = re.sub(r'https?://[^ ]*', '', filtered_tweet)
+        filtered_tweets.append(filtered_tweet.strip())
+    return filtered_tweets
+
+
+def download_tweets(target_tweets: int = 100):
     """Coordinates downloading a selection of tweets to a file."""
     users = load_users()
     queries = form_queries(users)
-    tweets = make_queries(queries, target_tweets)
-    with open(str(BASE_PATH / 'tweets.txt'), 'w') as f:
-        print(tweets)
-        for tweet in tweets:
-            tweet = re.sub('@[\w_]{4,15}', '', tweet)
-            f.write(f'{tweet}\n========\n')
-    
+    unfiltered_tweets = make_queries(queries, target_tweets)
+    print(unfiltered_tweets[:5])
+    tweets = filter_tweets(unfiltered_tweets)
+    print(tweets[:5])
+    with open(str(BASE_PATH / 'tweets.json'), 'w') as f:
+        json.dump({'tweets': tweets}, f)
