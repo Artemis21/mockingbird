@@ -1,5 +1,7 @@
 """Tool to get the data from the Twitter API."""
 import json
+import re
+from typing import List
 
 import requests
 
@@ -9,13 +11,13 @@ from .config import BASE_PATH, TWITTER_TOKEN
 ENDPOINT = 'https://api.twitter.com/2/tweets/search/recent'
 
 
-def load_users() -> list[str]:
+def load_users() -> List[str]:
     """Load the users to get tweets from."""
     with open(str(BASE_PATH / 'accounts.txt')) as f:
         return list(f.read().strip().split('\n'))
 
 
-def form_queries(users: list[str]) -> list[str]:
+def form_queries(users: List[str]) -> List[str]:
     """Put the lists of users into seperate Twitter queries."""
     next_group = []
     queries = []
@@ -29,7 +31,7 @@ def form_queries(users: list[str]) -> list[str]:
     return queries
 
 
-def make_queries(queries: list[str], target_tweets: int = 100) -> list[str]:
+def make_queries(queries: List[str], target_tweets: int) -> List[str]:
     """Get tweets from some queries."""
     headers = {'Authorization': f'Bearer {TWITTER_TOKEN}'}
     tweets = []
@@ -54,10 +56,21 @@ def make_queries(queries: list[str], target_tweets: int = 100) -> list[str]:
     return tweets
 
 
-def download_tweets():
+def filter_tweets(tweets: List[str]) -> List[str]:
+    """Filter tweets to remove user mentions and links."""
+    filtered_tweets = []
+    for tweet in tweets:
+        filtered_tweet = re.sub(r'@\w{4,15}', '', tweet)
+        filtered_tweet = re.sub(r'https?://[^ ]*', '', filtered_tweet)
+        filtered_tweets.append(filtered_tweet.strip())
+    return filtered_tweets
+
+
+def download_tweets(target_tweets: int = 100):
     """Coordinates downloading a selection of tweets to a file."""
     users = load_users()
     queries = form_queries(users)
-    tweets = make_queries(queries)
+    unfiltered_tweets = make_queries(queries, target_tweets)
+    tweets = filter_tweets(unfiltered_tweets)
     with open(str(BASE_PATH / 'tweets.json'), 'w') as f:
         json.dump({'tweets': tweets}, f)
