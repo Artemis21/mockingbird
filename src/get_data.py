@@ -2,6 +2,7 @@
 import json
 
 import requests
+import re
 
 from .config import BASE_PATH, TWITTER_TOKEN
 
@@ -9,13 +10,13 @@ from .config import BASE_PATH, TWITTER_TOKEN
 ENDPOINT = 'https://api.twitter.com/2/tweets/search/recent'
 
 
-def load_users() -> list[str]:
+def load_users():
     """Load the users to get tweets from."""
     with open(str(BASE_PATH / 'accounts.txt')) as f:
         return list(f.read().strip().split('\n'))
 
 
-def form_queries(users: list[str]) -> list[str]:
+def form_queries(users):
     """Put the lists of users into seperate Twitter queries."""
     next_group = []
     queries = []
@@ -29,7 +30,7 @@ def form_queries(users: list[str]) -> list[str]:
     return queries
 
 
-def make_queries(queries: list[str], target_tweets: int = 100) -> list[str]:
+def make_queries(queries, target_tweets):
     """Get tweets from some queries."""
     headers = {'Authorization': f'Bearer {TWITTER_TOKEN}'}
     tweets = []
@@ -54,10 +55,14 @@ def make_queries(queries: list[str], target_tweets: int = 100) -> list[str]:
     return tweets
 
 
-def download_tweets():
+def download_tweets(target_tweets=100):
     """Coordinates downloading a selection of tweets to a file."""
     users = load_users()
     queries = form_queries(users)
-    tweets = make_queries(queries)
-    with open(str(BASE_PATH / 'tweets.json'), 'w') as f:
-        json.dump({'tweets': tweets}, f)
+    tweets = make_queries(queries, target_tweets)
+    with open(str(BASE_PATH / 'tweets.txt'), 'w') as f:
+        print(tweets)
+        for tweet in tweets:
+            tweet = re.sub('@[\w_]{4,15}', '', tweet)
+            f.write(f'{tweet}\n========\n')
+    
