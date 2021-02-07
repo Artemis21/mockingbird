@@ -45,7 +45,6 @@ def make_queries(queries: List[str], target_tweets: int) -> List[str]:
             params = {'query': query, 'max_results': 100}
             if next_token:
                 params['next_token'] = next_token
-            print('aaa')
             response = requests.get(
                 ENDPOINT, headers=headers, params=params
             ).json()
@@ -72,8 +71,6 @@ def download_tweets(target_tweets: int = 100):
     users = load_users()
     queries = form_queries(users)
     unfiltered_tweets = make_queries(queries, target_tweets)
-    print(unfiltered_tweets[:5])
     tweets = filter_tweets(unfiltered_tweets)
-    print(tweets[:5])
     with open(str(BASE_PATH / 'tweets.json'), 'w') as f:
         json.dump({'tweets': tweets}, f)
