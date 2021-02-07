@@ -29,7 +29,7 @@ def form_queries(users: list[str]) -> list[str]:
     return queries
 
 
-def make_queries(queries: list[str], target_tweets: int = 5000) -> list[str]:
+def make_queries(queries: list[str], target_tweets: int = 100) -> list[str]:
     """Get tweets from some queries."""
     headers = {'Authorization': f'Bearer {TWITTER_TOKEN}'}
     tweets = []
@@ -47,8 +47,9 @@ def make_queries(queries: list[str], target_tweets: int = 5000) -> list[str]:
                 ENDPOINT, headers=headers, params=params
             ).json()
             for tweet in response['data']:
-                tweets.append(tweet['text'])
-            tweets_for_query += response['meta']['result_count']
+                if not tweet['text'].startswith('RT '):
+                    tweets.append(tweet['text'])
+                    tweets_for_query += 1
             next_token = response['meta'].get('next_token')
     return tweets
 
@@ -56,7 +57,7 @@ def make_queries(queries: list[str], target_tweets: int = 5000) -> list[str]:
 def download_tweets():
     """Coordinates downloading a selection of tweets to a file."""
     users = load_users()
-    queries = make_queries(users)
+    queries = form_queries(users)
     tweets = make_queries(queries)
     with open(str(BASE_PATH / 'tweets.json'), 'w') as f:
-        json.dump(f, {'tweets': tweets})
+        json.dump({'tweets': tweets}, f)
